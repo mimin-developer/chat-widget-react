@@ -1,4 +1,4 @@
-# chatwidget-react
+# chatkit-widgets
 
 Embeddable chat widgets for websites. The package currently ships `OmniWidget`, a launcher that embeds the omnichannel web chat from your chat platform app on any external website.
 
@@ -9,7 +9,7 @@ The launcher renders inside a shadow root with `omni-` prefixed CSS classes, so 
 ```html
 <script
   type="module"
-  src="https://cdn.jsdelivr.net/npm/chatwidget-react@0.2.0/dist/omnichannel.js"
+  src="https://cdn.jsdelivr.net/npm/chatkit-widgets@0.2.0/dist/omnichannel.js"
   data-omni-username="YOUR_USERNAME"
   data-omni-website-id="YOUR_WEBSITE_ID"
   data-omni-app-url="https://YOUR_PLATFORM_APP"
@@ -23,11 +23,11 @@ To serve the JavaScript from the platform app instead of the npm CDN, point `src
 ## Install from npm
 
 ```sh
-npm install chatwidget-react
+npm install chatkit-widgets
 ```
 
 ```js
-import { OmniWidget } from 'chatwidget-react'
+import { OmniWidget } from 'chatkit-widgets'
 
 const widget = OmniWidget.init({
   username: 'YOUR_USERNAME',
