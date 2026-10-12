@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { MessageCircleMore, X } from "lucide-react";
+import { ArrowLeft, ExternalLink, MessageCircleMore, X } from "lucide-react";
 
 export interface OmniWidgetOptions {
   username: string;
@@ -29,10 +29,46 @@ interface Theme {
 
 type WidgetLocale = "en" | "id";
 
-const labels: Record<WidgetLocale, { open: string; close: string }> = {
-  en: { open: "Open chat", close: "Close chat" },
-  id: { open: "Buka chat", close: "Tutup chat" },
+const labels: Record<
+  WidgetLocale,
+  {
+    open: string;
+    close: string;
+    back: string;
+    survey: string;
+    openNewTab: string;
+  }
+> = {
+  en: {
+    open: "Open chat",
+    close: "Close chat",
+    back: "Back to chat",
+    survey: "Satisfaction survey",
+    openNewTab: "Open in new tab",
+  },
+  id: {
+    open: "Buka chat",
+    close: "Tutup chat",
+    back: "Kembali ke chat",
+    survey: "Survei kepuasan",
+    openNewTab: "Buka di tab baru",
+  },
 };
+
+const csatPathPattern = /^\/csat\/(?!edit\/)[^/]+\/[^/]+\/?$/;
+
+/** Returns the survey URL only when it is a public CSAT page on the platform app. */
+function parseCsatUrl(value: unknown, appOrigin: string): string | null {
+  if (typeof value !== "string") return null;
+  try {
+    const url = new URL(value, appOrigin);
+    return url.origin === appOrigin && csatPathPattern.test(url.pathname)
+      ? url.href
+      : null;
+  } catch {
+    return null;
+  }
+}
 
 const defaultTheme: Theme = {
   buttonColor: "#0096a2",
@@ -71,6 +107,26 @@ function setStored(key: string, value: string): void {
   } catch {
     /* private mode: memory for this page only */
   }
+}
+
+function getSession(key: string): string | null {
+  try {
+    return sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function setSession(key: string, value: string): void {
+  try {
+    sessionStorage.setItem(key, value);
+  } catch {
+    /* private mode: memory for this page only */
+  }
+}
+
+function normalizeText(text?: string): string | undefined {
+  return text?.trim().slice(0, 500) || undefined;
 }
 
 function validColor(value: unknown, fallback: string): string {
@@ -133,6 +189,7 @@ function Widget({
   const [open, setOpen] = useState(host.dataset.open === "true");
   const [theme, setTheme] = useState<Theme>(defaultTheme);
   const [ready, setReady] = useState(false);
+  const [csatUrl, setCsatUrl] = useState<string | null>(null);
   const [locale, setLocale] = useState<WidgetLocale>(() => {
     const saved = getStored(`${storagePrefix}:locale`);
     if (saved === "id" || saved === "en") return saved;
@@ -140,11 +197,15 @@ function Widget({
   });
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const localeRef = useRef(locale);
+  const textRef = useRef(text);
   const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     localeRef.current = locale;
   }, [locale]);
+  useEffect(() => {
+    textRef.current = text;
+  }, [text]);
   const title = theme.title;
 
   const frameUrl = useMemo(() => {
@@ -155,7 +216,9 @@ function Widget({
     url.searchParams.set("website_id", options.websiteId);
     url.searchParams.set("visitor_id", visitorId);
     if (greetingSeen) url.searchParams.set("greeting_seen", "1");
-    const trimmedText = text?.trim().slice(0, 500);
+    // Tells the chat page it may hand CSAT links to this widget (older widgets lack this).
+    url.searchParams.set("csat_inline", "1");
+    const trimmedText = normalizeText(text);
     if (trimmedText) url.searchParams.set("text", trimmedText);
     return url.href;
   }, [
@@ -180,9 +243,19 @@ function Widget({
         return;
       if (event.data?.type === "chatwidget:omni:greeting-seen") {
         setStored(`${storagePrefix}:greeting`, "1");
+      } else if (event.data?.type === "chatwidget:omni:text-sent") {
+        // Applies on the next load; reloading the iframe mid-chat would reset it.
+        const sent = normalizeText(textRef.current);
+        if (sent) setSession(`${storagePrefix}:text-sent`, sent);
+      } else if (event.data?.type === "chatwidget:omni:csat-open") {
+        const next = parseCsatUrl(event.data.url, appOrigin);
+        if (next) setCsatUrl(next);
       } else if (event.data?.type === "chatwidget:omni:locale-set") {
         if (event.data.locale === "id" || event.data.locale === "en") {
           setStored(`${storagePrefix}:locale`, event.data.locale);
+          // The chat page sends `theme` right after `locale-set`; answering it before React
+          // commits would echo the old language back and make the two sides flip forever.
+          localeRef.current = event.data.locale;
           setLocale(event.data.locale);
         }
       } else if (event.data?.type === "chatwidget:omni:locale-ready") {
@@ -215,6 +288,12 @@ function Widget({
   const toggle = () => {
     const next = !open;
     setOpen(next);
+  };
+
+  const backToChat = () => {
+    setCsatUrl(null);
+    // The chat frame is inert until React commits; focus it afterwards.
+    requestAnimationFrame(() => iframeRef.current?.focus());
   };
 
   return (
@@ -267,7 +346,48 @@ function Widget({
           src={frameUrl}
           title={title || labels[locale].open}
           allow="clipboard-write"
+          inert={!!csatUrl}
+          aria-hidden={!!csatUrl}
         />
+        <AnimatePresence>
+          {csatUrl && (
+            <motion.div
+              key="csat"
+              className="omni-csat"
+              initial={reduceMotion ? false : { opacity: 0, x: 24 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={reduceMotion ? undefined : { opacity: 0, x: 24 }}
+              transition={{ duration: reduceMotion ? 0 : 0.2 }}
+            >
+              <div className="omni-csat-bar">
+                <button
+                  type="button"
+                  className="omni-csat-back"
+                  style={{ color: theme.buttonColor }}
+                  onClick={backToChat}
+                >
+                  <ArrowLeft aria-hidden="true" size={16} strokeWidth={2.25} />
+                  {labels[locale].back}
+                </button>
+                <a
+                  className="omni-csat-newtab"
+                  href={csatUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={labels[locale].openNewTab}
+                  title={labels[locale].openNewTab}
+                >
+                  <ExternalLink aria-hidden="true" size={15} strokeWidth={2} />
+                </a>
+              </div>
+              <iframe
+                className="omni-csat-frame"
+                src={csatUrl}
+                title={labels[locale].survey}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.section>
       {ready && (
         <motion.button
@@ -390,8 +510,12 @@ export const OmniWidget = {
     const root = createRoot(container);
     const instance = { root, host };
     mounted = instance;
-    const initText =
+    const rawText =
       typeof options.text === "string" ? options.text : undefined;
+    const alreadySent =
+      !!rawText &&
+      getSession(`${storagePrefix}:text-sent`) === normalizeText(rawText);
+    const initText = alreadySent ? undefined : rawText;
     root.render(
       <Widget
         options={options}
