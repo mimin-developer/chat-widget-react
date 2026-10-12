@@ -1,23 +1,23 @@
 {
-  "name": "mimin-omnichannel-widget-react",
-  "description": "Embeddable omnichannel web chat widget for Mimin",
+  "name": "chatwidget-react",
+  "description": "Embeddable chat widgets for websites, starting with the omnichannel web chat (OmniWidget)",
   "keywords": [
-    "mimin",
+    "chat-widget",
     "omnichannel",
     "widget",
     "web-chat",
     "react"
   ],
   "private": false,
-  "version": "0.1.5",
+  "version": "0.2.0",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mimin-developer/mimin-omnichannel-widget.git"
+    "url": "git+https://github.com/mimin-developer/chat-widget-react.git"
   },
-  "homepage": "https://github.com/mimin-developer/mimin-omnichannel-widget#readme",
+  "homepage": "https://github.com/mimin-developer/chat-widget-react#readme",
   "bugs": {
-    "url": "https://github.com/mimin-developer/mimin-omnichannel-widget/issues"
+    "url": "https://github.com/mimin-developer/chat-widget-react/issues"
   },
   "scripts": {
     "dev": "vite",

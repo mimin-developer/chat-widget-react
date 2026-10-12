@@ -3,7 +3,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { MessageCircleMore, X } from "lucide-react";
 
-export interface OmnichannelOptions {
+export interface OmniWidgetOptions {
   username: string;
   websiteId: string;
   appUrl: string;
@@ -12,7 +12,7 @@ export interface OmnichannelOptions {
   text?: string;
 }
 
-export interface OmnichannelController {
+export interface OmniWidgetController {
   open(): void;
   close(): void;
   destroy(): void;
@@ -109,7 +109,7 @@ function normalizeTheme(value: unknown): Theme {
 }
 
 /** Normalize the public position value to internal 'left' | 'right'. */
-function normPos(pos: OmnichannelOptions["position"]): "left" | "right" {
+function normPos(pos: OmniWidgetOptions["position"]): "left" | "right" {
   return pos === "left" || pos === "bottom-left" ? "left" : "right";
 }
 
@@ -122,7 +122,7 @@ function Widget({
   host,
   text,
 }: {
-  options: OmnichannelOptions;
+  options: OmniWidgetOptions;
   appOrigin: string;
   visitorId: string;
   greetingSeen: boolean;
@@ -178,23 +178,23 @@ function Widget({
         event.source !== iframeRef.current?.contentWindow
       )
         return;
-      if (event.data?.type === "mimin:omnichannel:greeting-seen") {
+      if (event.data?.type === "chatwidget:omni:greeting-seen") {
         setStored(`${storagePrefix}:greeting`, "1");
-      } else if (event.data?.type === "mimin:omnichannel:locale-set") {
+      } else if (event.data?.type === "chatwidget:omni:locale-set") {
         if (event.data.locale === "id" || event.data.locale === "en") {
           setStored(`${storagePrefix}:locale`, event.data.locale);
           setLocale(event.data.locale);
         }
-      } else if (event.data?.type === "mimin:omnichannel:locale-ready") {
+      } else if (event.data?.type === "chatwidget:omni:locale-ready") {
         iframeRef.current?.contentWindow?.postMessage(
-          { type: "mimin:omnichannel:locale-apply", locale: localeRef.current },
+          { type: "chatwidget:omni:locale-apply", locale: localeRef.current },
           appOrigin,
         );
-      } else if (event.data?.type === "mimin:omnichannel:theme") {
+      } else if (event.data?.type === "chatwidget:omni:theme") {
         setTheme(normalizeTheme(event.data.theme));
         setReady(true);
         iframeRef.current?.contentWindow?.postMessage(
-          { type: "mimin:omnichannel:locale-apply", locale: localeRef.current },
+          { type: "chatwidget:omni:locale-apply", locale: localeRef.current },
           appOrigin,
         );
       }
@@ -202,11 +202,11 @@ function Widget({
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
     };
-    host.addEventListener("mimin:control", onControl);
+    host.addEventListener("chatwidget:omni:control", onControl);
     window.addEventListener("message", onMessage);
     window.addEventListener("keydown", onKeyDown);
     return () => {
-      host.removeEventListener("mimin:control", onControl);
+      host.removeEventListener("chatwidget:omni:control", onControl);
       window.removeEventListener("message", onMessage);
       window.removeEventListener("keydown", onKeyDown);
     };
@@ -219,14 +219,14 @@ function Widget({
 
   return (
     <div
-      className={`mimin-widget mimin-widget--${normPos(options.position)}${open && ready ? " mimin-widget--open" : ""}`}
+      className={`omni-widget omni-widget--${normPos(options.position)}${open && ready ? " omni-widget--open" : ""}`}
       style={{
         [normPos(options.position) === "left" ? "left" : "right"]: "20px",
         zIndex: options.zIndex ?? 2147483000,
       }}
     >
       <motion.section
-        className="mimin-panel"
+        className="omni-panel"
         role="dialog"
         aria-label={title || labels[locale].open}
         aria-hidden={!open || !ready}
@@ -255,14 +255,14 @@ function Widget({
       >
         <button
           type="button"
-          className="mimin-close"
+          className="omni-close"
           aria-label={labels[locale].close}
           onClick={toggle}
         >
           <X aria-hidden="true" size={16} strokeWidth={2} />
         </button>
         <iframe
-          className="mimin-chat-frame"
+          className="omni-chat-frame"
           ref={iframeRef}
           src={frameUrl}
           title={title || labels[locale].open}
@@ -272,7 +272,7 @@ function Widget({
       {ready && (
         <motion.button
           type="button"
-          className={`mimin-launcher${title && !open ? " mimin-launcher--titled" : ""}`}
+          className={`omni-launcher${title && !open ? " omni-launcher--titled" : ""}`}
           style={{
             backgroundColor: theme.buttonColor,
             color: theme.buttonTextColor,
@@ -290,7 +290,7 @@ function Widget({
           <AnimatePresence mode="wait" initial={false}>
             <motion.span
               key={open ? "close" : "chat"}
-              className="mimin-launcher-content"
+              className="omni-launcher-content"
               initial={
                 reduceMotion ? false : { opacity: 0, rotate: -35, scale: 0.75 }
               }
@@ -308,7 +308,7 @@ function Widget({
                 <>
                   {theme.iconSrc ? (
                     <img
-                      className="mimin-launcher-image"
+                      className="omni-launcher-image"
                       src={theme.iconSrc}
                       alt=""
                     />
@@ -320,7 +320,7 @@ function Widget({
                     />
                   )}
                   {title && (
-                    <span className="mimin-launcher-label">{title}</span>
+                    <span className="omni-launcher-label">{title}</span>
                   )}
                 </>
               )}
@@ -338,7 +338,7 @@ function control(open: boolean) {
   if (!mounted) return;
   mounted.host.dataset.open = String(open);
   mounted.host.dispatchEvent(
-    new CustomEvent("mimin:control", { detail: open }),
+    new CustomEvent("chatwidget:omni:control", { detail: open }),
   );
 }
 
@@ -349,15 +349,15 @@ function destroy() {
   mounted = null;
 }
 
-export const Omnichannel = {
-  init(options: OmnichannelOptions): OmnichannelController {
+export const OmniWidget = {
+  init(options: OmniWidgetOptions): OmniWidgetController {
     if (
       !options?.username?.trim() ||
       !options.websiteId?.trim() ||
       !options.appUrl?.trim()
     ) {
       throw new Error(
-        "Omnichannel.init requires username, websiteId, and appUrl",
+        "OmniWidget.init requires username, websiteId, and appUrl",
       );
     }
     const appUrl = new URL(options.appUrl);
@@ -365,7 +365,7 @@ export const Omnichannel = {
       throw new Error("appUrl must be an HTTP(S) URL");
     destroy();
 
-    const storagePrefix = `mimin:omnichannel:${appUrl.host}:${options.username}:${options.websiteId}`;
+    const storagePrefix = `chatwidget:omni:${appUrl.host}:${options.username}:${options.websiteId}`;
     const storedId = getStored(`${storagePrefix}:visitor`);
     const visitorId =
       storedId && visitorPattern.test(storedId) ? storedId : newVisitorId();
@@ -373,7 +373,7 @@ export const Omnichannel = {
     const greetingSeen = getStored(`${storagePrefix}:greeting`) === "1";
 
     const host = document.createElement("div");
-    host.id = "mimin-omnichannel-widget";
+    host.id = "chatwidget-omni";
     host.dataset.open = "false";
     const shadow = host.attachShadow({ mode: "open" });
     const stylesheet = document.createElement("link");
@@ -422,19 +422,19 @@ export const Omnichannel = {
 };
 
 // A plain external module tag works on hosts that disallow inline scripts.
-// Manual `import { Omnichannel } ...; Omnichannel.init(...)` remains supported.
+// Manual `import { OmniWidget } ...; OmniWidget.init(...)` remains supported.
 if (typeof document !== "undefined") {
   const script = Array.from(
     document.querySelectorAll<HTMLScriptElement>(
-      'script[type="module"][data-mimin-username][data-mimin-website-id][data-mimin-app-url]',
+      'script[type="module"][data-omni-username][data-omni-website-id][data-omni-app-url]',
     ),
   ).find((element) => element.src === import.meta.url);
   if (script) {
-    const rawPos = script.dataset.miminPosition;
-    Omnichannel.init({
-      username: script.dataset.miminUsername || "",
-      websiteId: script.dataset.miminWebsiteId || "",
-      appUrl: script.dataset.miminAppUrl || "",
+    const rawPos = script.dataset.omniPosition;
+    OmniWidget.init({
+      username: script.dataset.omniUsername || "",
+      websiteId: script.dataset.omniWebsiteId || "",
+      appUrl: script.dataset.omniAppUrl || "",
       position:
         rawPos === "bottom-left" ||
         rawPos === "bottom-right" ||
@@ -442,7 +442,7 @@ if (typeof document !== "undefined") {
         rawPos === "right"
           ? rawPos
           : undefined,
-      text: script.dataset.miminText,
+      text: script.dataset.omniText,
     });
   }
 }

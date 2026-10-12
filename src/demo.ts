@@ -1,12 +1,13 @@
-import { Omnichannel } from './widget'
+import { OmniWidget } from './widget'
 
 const input = (id: string) => (document.getElementById(id) as HTMLInputElement).value
 
 document.getElementById('mount')?.addEventListener('click', () => {
-  Omnichannel.init({
+  OmniWidget.init({
     username: input('username'),
     websiteId: input('websiteId'),
     appUrl: input('appUrl'),
+    text: input('text') || undefined,
   })
 })
-document.getElementById('unmount')?.addEventListener('click', () => Omnichannel.destroy())
+document.getElementById('unmount')?.addEventListener('click', () => OmniWidget.destroy())
