@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SiCepat — Floating Widget Replica</title>
+<style>
+  :root{
+    --red: #e8262e;
+    --red-dark: #c71d24;
+    --ink: #1f2430;
+    --muted: #6b7280;
+    --bg: #f3f4f6;
+    --card: #ffffff;
+    --ring: rgba(232,38,46,.18);
+  }
+
+  *{ box-sizing: border-box; }
+  body{ margin:0; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--ink); }
+
+  /* ---------- basic top nav (kept simple, per request) ---------- */
+  header{
+    background:#fff; display:flex; align-items:center; justify-content:space-between;
+    padding:16px 48px; box-shadow:0 1px 0 rgba(0,0,0,.06);
+  }
+  .logo{ display:flex; align-items:center; gap:8px; font-weight:800; font-size:20px; color:var(--red); }
+  .logo svg{ width:26px; height:26px; }
+  nav{ display:flex; gap:32px; font-size:14px; color:#333; }
+  .promo-btn{
+    background:var(--red); color:#fff; border:none; padding:10px 18px; border-radius:8px;
+    font-size:13px; font-weight:600; cursor:pointer;
+  }
+  @media (max-width:800px){ nav{ display:none; } header{ padding:14px 20px; } }
+
+  /* ---------- basic feature grid (kept simple, per request) ---------- */
+  .features{
+    max-width:1200px; margin:40px auto; display:grid;
+    grid-template-columns:repeat(5,1fr); gap:24px; padding:0 24px;
+  }
+  @media (max-width:900px){ .features{ grid-template-columns:repeat(2,1fr); } }
+  .feature-card{ background:var(--card); border-radius:10px; padding:28px 16px; text-align:center; }
+  .feature-card .icon{
+    width:56px; height:56px; margin:0 auto 14px; border-radius:50%; background:#fdeceb;
+    display:flex; align-items:center; justify-content:center; color:var(--red); font-size:22px;
+  }
+  .feature-card h3{ font-size:14px; margin:0 0 6px; }
+  .feature-card p{ font-size:12px; color:var(--muted); line-height:1.5; margin:0; }
+
+  .hero-basic{
+    max-width:1200px; margin:0 auto 140px; padding:60px 24px; text-align:center; color:var(--muted); font-size:13px;
+  }
+
+  /* ================================================================
+     FLOATING SPEED-DIAL WIDGET — the part this build focuses on
+     ================================================================ */
+  .widget{
+    position:fixed; right:28px; bottom:28px; z-index:1000;
+    display:flex; flex-direction:column; align-items:flex-end; gap:12px;
+  }
+
+  /* backdrop so an outside click/tap closes the menu */
+  .widget-backdrop{
+    position:fixed; inset:0; background:transparent; z-index:990;
+    display:none;
+  }
+  .widget-backdrop.active{ display:block; }
+
+  /* each speed-dial option */
+  .widget-item{
+    display:flex; align-items:center; gap:10px;
+    transform: translateY(12px) scale(.9);
+    opacity:0;
+    pointer-events:none;
+    transition: transform .28s cubic-bezier(.34,1.56,.64,1), opacity .22s ease;
+  }
+  .widget.open .widget-item{
+    transform: translateY(0) scale(1);
+    opacity:1;
+    pointer-events:auto;
+  }
+  /* stagger the reveal, bottom item (closest to FAB) animates first */
+  .widget.open .widget-item:nth-child(1){ transition-delay:.17s; }
+  .widget.open .widget-item:nth-child(2){ transition-delay:.14s; }
+  .widget.open .widget-item:nth-child(3){ transition-delay:.11s; }
+  .widget.open .widget-item:nth-child(4){ transition-delay:.08s; }
+  .widget.open .widget-item:nth-child(5){ transition-delay:.05s; }
+  .widget.open .widget-item:nth-child(6){ transition-delay:.02s; }
+  /* reverse the stagger slightly on close for a natural collapse */
+  .widget:not(.open) .widget-item{ transition-delay:0s !important; }
+
+  .widget-item button{
+    display:flex; align-items:center; gap:10px;
+    background:#fff; border:1px solid rgba(0,0,0,.06);
+    border-radius:999px; padding:10px 18px 10px 14px;
+    font-size:13px; font-weight:600; color:var(--ink);
+    box-shadow:0 6px 18px rgba(17,17,17,.12);
+    cursor:pointer; white-space:nowrap;
+  }
+  .widget-item button:hover{ background:#fff5f5; color:var(--red-dark); }
+  .widget-item button:focus-visible{ outline:2px solid var(--red); outline-offset:2px; }
+  .widget-item .ico{
+    width:26px; height:26px; border-radius:50%; background:var(--red);
+    color:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .widget-item .ico svg{ width:14px; height:14px; }
+
+  /* the main toggle button, with its persistent "Need a help?" label */
+  .fab-row{ display:flex; align-items:center; gap:10px; }
+  .fab-label{
+    background:#fff; border-radius:999px; padding:10px 16px;
+    font-size:13px; font-weight:600; color:var(--ink);
+    box-shadow:0 6px 18px rgba(17,17,17,.12);
+    display:flex; align-items:center; gap:8px;
+    cursor:pointer; user-select:none;
+  }
+  .fab-label svg{ width:16px; height:16px; color:var(--red); }
+
+  .fab{
+    width:56px; height:56px; border-radius:50%; border:none;
+    background:var(--red); color:#fff; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 10px 24px rgba(232,38,46,.35);
+    cursor:pointer; position:relative;
+  }
+  .fab:focus-visible{ outline:2px solid #111; outline-offset:3px; }
+  .fab svg{ width:24px; height:24px; transition: transform .3s cubic-bezier(.4,0,.2,1); }
+  .widget.open .fab svg{ transform: rotate(135deg); }
+
+  /* subtle idle pulse on the fab, pauses once opened */
+  .fab::after{
+    content:""; position:absolute; inset:-6px; border-radius:50%;
+    border:2px solid var(--red); opacity:.5;
+    animation: pulse 2.2s ease-out infinite;
+  }
+  .widget.open .fab::after{ animation:none; display:none; }
+  @keyframes pulse{
+    0%{ transform:scale(.85); opacity:.5; }
+    80%{ transform:scale(1.25); opacity:0; }
+    100%{ opacity:0; }
+  }
+
+  /* ---------- livechat popup (iframe), small floating chat window ---------- */
+  .livechat-popup{
+    position:fixed; right:28px; bottom:100px; z-index:1100;
+    width:360px; height:520px; max-width:92vw; max-height:72vh;
+    background:#fff; border-radius: var(--omni-radius, 18px); overflow:hidden;
+    box-shadow:0 20px 50px rgba(17,17,17,.25);
+    display:flex; flex-direction:column;
+    transform-origin:bottom right;
+    transform:scale(.92) translateY(16px);
+    opacity:0; pointer-events:none;
+    transition: transform .25s cubic-bezier(.34,1.56,.64,1), opacity .2s ease;
+  }
+  .livechat-popup.open{
+    transform:scale(1) translateY(0);
+    opacity:1; pointer-events:auto;
+  }
+  .livechat-header{
+    background:var(--red); color:#fff; padding:14px 16px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .livechat-header span{ font-size:14px; font-weight:700; }
+  .livechat-close{
+    background:rgba(255,255,255,.18); border:none; color:#fff;
+    width:26px; height:26px; border-radius:50%; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .livechat-close:hover{ background:rgba(255,255,255,.3); }
+  .livechat-close:focus-visible{ outline:2px solid #fff; outline-offset:2px; }
+  .livechat-close svg{ width:14px; height:14px; }
+  .livechat-body{ flex:1; position:relative; background:#f3f4f6; }
+  .livechat-body iframe{ width:100%; height:100%; border:none; display:block; }
+  @media (max-width:480px){
+    .livechat-popup{ right:12px; bottom:92px; width:94vw; height:68vh; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .widget-item, .fab svg, .fab::after{ transition:none !important; animation:none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7l10 5 10-5-10-5Zm0 7L2 14l10 5 10-5-10-5Z"/></svg>
+    SiCepat
+  </div>
+  <nav>
+    <span>Layanan</span><span>Perusahaan</span><span>Berita &amp; Promosi</span><span>Lokasi</span><span>Karir</span>
+  </nav>
+  <button class="promo-btn">Nikmati Diskon s/d 40% Disini</button>
+</header>
+
+<section class="features">
+  <div class="feature-card"><div class="icon">⚖️</div><h3>Timbangan Akurat</h3><p>Berat paket lebih akurat karna ditimbang dengan timbangan digital</p></div>
+  <div class="feature-card"><div class="icon">🛡️</div><h3>Garansi Ganti Rugi</h3><p>Layanan penggantian rugi barang 1kg maksimal Rp500.000,-</p></div>
+  <div class="feature-card"><div class="icon">📍</div><h3>Lacak Resi</h3><p>Makin memudahkanmu untuk tracking status paket dengan fitur Request Resi</p></div>
+  <div class="feature-card"><div class="icon">⏱️</div><h3>15 Jam Sampai</h3><p>Kirim Cepat dengan durasi 15 Jam sampai tanpa tambahan biaya apapun</p></div>
+  <div class="feature-card"><div class="icon">📦</div><h3>Lebih Cepat</h3><p>Paketmu dikirim lebih cepat dengan pengiriman reguler dalam waktu 1-2 hari</p></div>
+</section>
+
+<p class="hero-basic">(Konten lainnya sengaja dibuat basic — fokus build ini ada di floating widget di pojok kanan bawah ⟶)</p>
+
+<!-- ============ FLOATING WIDGET ============ -->
+<div class="widget-backdrop" id="widgetBackdrop"></div>
+
+<div class="widget" id="widget">
+  <div class="widget-item">
+    <button type="button" data-action="livechat">
+      <span class="ico">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H9l-4.3 3.3A1 1 0 0 1 3 19.6V5a1 1 0 0 1 1-1Zm2.5 5a1 1 0 1 0 0 2h7a1 1 0 1 0 0-2h-7Zm0 4a1 1 0 1 0 0 2h4.5a1 1 0 1 0 0-2H6.5Z"/></svg>
+      </span>
+      Livechat SiCepat
+    </button>
+  </div>
+  <div class="widget-item">
+    <button type="button" data-action="instagram">
+      <span class="ico">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c-2.7 0-3.05.01-4.12.06-1.06.05-1.79.22-2.43.47a4.9 4.9 0 0 0-1.77 1.15A4.9 4.9 0 0 0 2.53 5.4c-.25.64-.42 1.37-.47 2.43C2.01 8.9 2 9.25 2 12s.01 3.1.06 4.17c.05 1.06.22 1.79.47 2.43a4.9 4.9 0 0 0 1.15 1.77 4.9 4.9 0 0 0 1.77 1.15c.64.25 1.37.42 2.43.47C8.95 21.99 9.3 22 12 22s3.05-.01 4.12-.06c1.06-.05 1.79-.22 2.43-.47a4.9 4.9 0 0 0 1.77-1.15 4.9 4.9 0 0 0 1.15-1.77c.25-.64.42-1.37.47-2.43.05-1.07.06-1.42.06-4.17s-.01-3.1-.06-4.17c-.05-1.06-.22-1.79-.47-2.43a4.9 4.9 0 0 0-1.15-1.77A4.9 4.9 0 0 0 18.55.53c-.64-.25-1.37-.42-2.43-.47C15.05 2.01 14.7 2 12 2Zm0 1.8c2.67 0 2.99.01 4.04.06.98.04 1.5.21 1.86.34.47.18.8.4 1.15.75.35.35.57.68.75 1.15.13.36.3.88.34 1.86.05 1.05.06 1.37.06 4.04s-.01 2.99-.06 4.04c-.04.98-.21 1.5-.34 1.86-.18.47-.4.8-.75 1.15-.35.35-.68.57-1.15.75-.36.13-.88.3-1.86.34-1.05.05-1.37.06-4.04.06s-2.99-.01-4.04-.06c-.98-.04-1.5-.21-1.86-.34a3.1 3.1 0 0 1-1.15-.75 3.1 3.1 0 0 1-.75-1.15c-.13-.36-.3-.88-.34-1.86C3.81 14.99 3.8 14.67 3.8 12s.01-2.99.06-4.04c.04-.98.21-1.5.34-1.86.18-.47.4-.8.75-1.15.35-.35.68-.57 1.15-.75.36-.13.88-.3 1.86-.34C9.01 3.81 9.33 3.8 12 3.8Zm0 3.25A4.95 4.95 0 1 0 12 17a4.95 4.95 0 0 0 0-9.95Zm0 8.17A3.22 3.22 0 1 1 12 8.8a3.22 3.22 0 0 1 0 6.45Zm5.15-8.37a1.16 1.16 0 1 1-2.31 0 1.16 1.16 0 0 1 2.31 0Z"/></svg>
+      </span>
+      Instagram DM SiCepat
+    </button>
+  </div>
+  <div class="widget-item">
+    <button type="button" data-action="telepon">
+      <span class="ico">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.3 21 3 13.7 3 4.99a1 1 0 0 1 1-1h3.49a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.02L6.6 10.8Z"/></svg>
+      </span>
+      Telepon CS SiCepat
+    </button>
+  </div>
+  <div class="widget-item">
+    <button type="button" data-action="email1">
+      <span class="ico">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Zm0 2-8 5-8-5h16ZM4 18V8.24l8 5 8-5V18H4Z"/></svg>
+      </span>
+      Email 1
+    </button>
+  </div>
+  <div class="widget-item">
+    <button type="button" data-action="email2">
+      <span class="ico">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Zm0 2-8 5-8-5h16ZM4 18V8.24l8 5 8-5V18H4Z"/></svg>
+      </span>
+      Email 2
+    </button>
+  </div>
+  <div class="widget-item">
+    <button type="button" data-action="email3">
+      <span class="ico">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Zm0 2-8 5-8-5h16ZM4 18V8.24l8 5 8-5V18H4Z"/></svg>
+      </span>
+      Email 3
+    </button>
+  </div>
+
+  <div class="fab-row">
+    <div class="fab-label" id="fabLabel">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.66 15.03L2 22l5.1-1.33A10 10 0 1 0 12 2Zm0 18a7.9 7.9 0 0 1-4.15-1.17l-.3-.18-2.9.76.78-2.83-.2-.3A8 8 0 1 1 12 20Z"/></svg>
+      Need a help?
+    </div>
+    <button class="fab" id="fabToggle" aria-haspopup="true" aria-expanded="false" aria-label="Buka menu bantuan SiCepat">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 15h-2v-2h2v2Zm2.07-7.75c-.47.47-.81.84-.9 1.57-.03.28-.17.68-.17 1.18h-2v-.5c0-.75.3-1.42.8-1.92l1.1-1.12c.33-.32.5-.77.5-1.26 0-1-.8-1.7-1.8-1.7-.84 0-1.54.52-1.78 1.28l-1.83-.78C7.4 4.95 8.86 4 10.6 4c1.9 0 3.5 1.4 3.5 3.3 0 .94-.38 1.74-1.03 2.95Z"/></svg>
+    </button>
+  </div>
+</div>
+
+<div class="livechat-popup" id="livechatPopup" role="dialog" aria-label="Livechat SiCepat">
+  <div class="livechat-header">
+    <span>Livechat SiCepat</span>
+    <button class="livechat-close" id="livechatClose" aria-label="Tutup livechat">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19l5.6-5.6 5.6 5.6 1.4-1.4-5.6-5.6L19 6.4 17.6 5 12 10.6 6.4 5Z"/></svg>
+    </button>
+  </div>
+  <div class="livechat-body" id="livechatBody">
+  </div>
+</div>
+
+<script>
+(function () {
+  const widget   = document.getElementById('widget');
+  const toggle   = document.getElementById('fabToggle');
+  const label    = document.getElementById('fabLabel');
+  const backdrop = document.getElementById('widgetBackdrop');
+
+  function openWidget() {
+    widget.classList.add('open');
+    toggle.setAttribute('aria-expanded', 'true');
+    backdrop.classList.add('active');
+  }
+  function closeWidget() {
+    widget.classList.remove('open');
+    toggle.setAttribute('aria-expanded', 'false');
+    backdrop.classList.remove('active');
+  }
+  function toggleWidget() {
+    widget.classList.contains('open') ? closeWidget() : openWidget();
+  }
+
+  toggle.addEventListener('click', toggleWidget);
+  label.addEventListener('click', toggleWidget);           // the "Need a help?" pill also opens it
+  backdrop.addEventListener('click', closeWidget);          // tap outside closes it
+
+  // ---------- livechat popup (iframe) ----------
+  // Standalone: tidak memakai package OmniWidget. Memakai route /web-chat/embed/ (boleh di-frame)
+  // + handshake postMessage yang sama dengan widget resmi.
+  const APP_URL    = 'https://omni.1engage.ai';
+  const USERNAME   = 'sicepattesting';
+  const WEBSITE_ID = 'sicepattesting-00246-69242';
+  const LOCALE     = 'id';
+  const KEY_VISITOR  = 'sicepat:livechat:visitor';
+  const KEY_GREETING = 'sicepat:livechat:greeting';
+
+  const livechatPopup = document.getElementById('livechatPopup');
+  const livechatClose = document.getElementById('livechatClose');
+  const livechatBody  = document.getElementById('livechatBody');
+  let livechatIframe = null;
+
+  const radiusPx = {
+    none: 0,
+    small: 8,
+    medium: 12,
+    large: 18,
+  };
+
+  function store(key, value) {
+    try {
+      if (value === undefined) return localStorage.getItem(key);
+      localStorage.setItem(key, value);
+    } catch (_) { return null; }
+  }
+
+  function newVisitorId() {
+    if (typeof crypto.randomUUID === 'function') return 'ow_' + crypto.randomUUID();
+    const b = crypto.getRandomValues(new Uint8Array(16));
+    b[6] = (b[6] & 0x0f) | 0x40;
+    b[8] = (b[8] & 0x3f) | 0x80;
+    const h = Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
+    return 'ow_' + [h.slice(0, 8), h.slice(8, 12), h.slice(12, 16), h.slice(16, 20), h.slice(20)].join('-');
+  }
+
+  function visitorId() {
+    const re = /^ow_[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    let id = store(KEY_VISITOR);
+    if (!id || !re.test(id)) { id = newVisitorId(); store(KEY_VISITOR, id); }
+    return id;
+  }
+
+  function livechatUrl() {
+    const url = new URL('/web-chat/embed/' + encodeURIComponent(USERNAME), APP_URL);
+    url.searchParams.set('website_id', WEBSITE_ID);
+    url.searchParams.set('visitor_id', visitorId());
+    if (store(KEY_GREETING) === '1') url.searchParams.set('greeting_seen', '1');
+    return url.href;
+  }
+
+  function sendLocale() {
+    if (livechatIframe && livechatIframe.contentWindow) {
+      livechatIframe.contentWindow.postMessage({ type: 'chatwidget:omni:locale-apply', locale: LOCALE }, APP_URL);
+    }
+  }
+
+  window.addEventListener('message', (event) => {
+    if (event.origin !== APP_URL || !livechatIframe || event.source !== livechatIframe.contentWindow) return;
+    const type = event.data && event.data.type;
+    if (type === 'chatwidget:omni:theme') {
+      sendLocale();
+      const theme = event.data && event.data.theme;
+      if (theme && typeof theme.borderRadius === 'string' && Object.prototype.hasOwnProperty.call(radiusPx, theme.borderRadius)) {
+        livechatPopup.style.setProperty('--omni-radius', radiusPx[theme.borderRadius] + 'px');
+      }
+    } else if (type === 'chatwidget:omni:locale-ready') {
+      sendLocale();
+    } else if (type === 'chatwidget:omni:greeting-seen') {
+      store(KEY_GREETING, '1');
+    }
+  });
+
+  function openLivechat() {
+    if (!livechatIframe) {
+      livechatIframe = document.createElement('iframe');
+      livechatIframe.src = livechatUrl();
+      livechatIframe.title = 'Livechat SiCepat';
+      livechatIframe.allow = 'clipboard-write';
+      livechatBody.appendChild(livechatIframe);
+    }
+    livechatPopup.classList.add('open');
+    closeWidget(); // tutup speed-dial begitu livechat kebuka
+  }
+  function closeLivechat() {
+    livechatPopup.classList.remove('open');
+  }
+  livechatClose.addEventListener('click', closeLivechat);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (livechatPopup.classList.contains('open')) closeLivechat();
+    else closeWidget();
+  });
+
+  // actions for each menu item
+  widget.querySelectorAll('.widget-item button').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const action = btn.dataset.action;
+      console.log('Widget action clicked:', action);
+      if (action === 'livechat') {
+        openLivechat();
+        return;
+      }
+      // Ganti bagian ini dengan aksi asli, misalnya:
+      // window.open('https://instagram.com/sicepat_ekspres', '_blank');
+      // window.location.href = 'tel:15061';
+      // window.location.href = 'mailto:cs@sicepat.com';
+      closeWidget();
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

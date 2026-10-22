@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowLeft, ExternalLink, MessageCircleMore, X } from "lucide-react";
@@ -25,7 +25,18 @@ interface Theme {
   buttonTextColor: string;
   iconSrc: string;
   title: string;
+  borderRadius: RadiusSize;
 }
+
+type RadiusSize = "none" | "small" | "medium" | "large";
+
+/** Panel corner radius in px per size; `large` matches the stylesheet default (18px outer, 17px inside the 1px border). */
+const radiusPx: Record<RadiusSize, { panel: number; inner: number }> = {
+  none: { panel: 0, inner: 0 },
+  small: { panel: 8, inner: 7 },
+  medium: { panel: 12, inner: 11 },
+  large: { panel: 18, inner: 17 },
+};
 
 type WidgetLocale = "en" | "id";
 
@@ -75,6 +86,7 @@ const defaultTheme: Theme = {
   buttonTextColor: "#ffffff",
   iconSrc: "",
   title: "",
+  borderRadius: "large",
 };
 
 const visitorPattern =
@@ -161,6 +173,11 @@ function normalizeTheme(value: unknown): Theme {
       typeof data.title === "string"
         ? data.title.slice(0, 100)
         : defaultTheme.title,
+    borderRadius:
+      typeof data.borderRadius === "string" &&
+      Object.hasOwn(radiusPx, data.borderRadius)
+        ? (data.borderRadius as RadiusSize)
+        : defaultTheme.borderRadius,
   };
 }
 
@@ -302,7 +319,9 @@ function Widget({
       style={{
         [normPos(options.position) === "left" ? "left" : "right"]: "20px",
         zIndex: options.zIndex ?? 2147483000,
-      }}
+        "--omni-radius": `${radiusPx[theme.borderRadius].panel}px`,
+        "--omni-radius-inner": `${radiusPx[theme.borderRadius].inner}px`,
+      } as CSSProperties}
     >
       <motion.section
         className="omni-panel"

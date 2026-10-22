@@ -9,13 +9,13 @@
 .omni-launcher-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 600; line-height: 1.2; }
 .omni-launcher:focus-visible, .omni-close:focus-visible { outline: 3px solid #111827; outline-offset: 3px; }
 .omni-launcher-image { flex: none; width: 26px; height: 26px; object-fit: contain; }
-.omni-panel { position: relative; pointer-events: auto; visibility: hidden; width: min(390px, calc(100vw - 24px)); height: min(660px, calc(100vh - 92px)); height: min(660px, calc(100dvh - 92px)); min-height: 300px; display: flex; flex-direction: column; background: #fff; border-radius: 18px; border: 1px solid rgba(0, 0, 0, .09); box-shadow: 0 20px 65px rgba(0, 0, 0, .26); transform-origin: bottom right; }
+.omni-panel { position: relative; pointer-events: auto; visibility: hidden; width: min(390px, calc(100vw - 24px)); height: min(660px, calc(100vh - 92px)); height: min(660px, calc(100dvh - 92px)); min-height: 300px; display: flex; flex-direction: column; background: #fff; border-radius: var(--omni-radius, 18px); border: 1px solid rgba(0, 0, 0, .09); box-shadow: 0 20px 65px rgba(0, 0, 0, .26); transform-origin: bottom right; }
 .omni-widget--left .omni-panel { transform-origin: bottom left; }
 .omni-close { position: absolute; top: -8px; right: -8px; z-index: 1; appearance: none; border: 1px solid rgba(255, 255, 255, .6); padding: 0; background: linear-gradient(135deg, rgba(255, 255, 255, .72), rgba(255, 255, 255, .48)); -webkit-backdrop-filter: blur(14px) saturate(180%); backdrop-filter: blur(14px) saturate(180%); border-radius: 999px; width: 28px; height: 28px; display: grid; place-items: center; cursor: pointer; color: #1f2937; box-shadow: inset 0 1px 1px rgba(255, 255, 255, .9), inset 0 -1px 1px rgba(255, 255, 255, .35), 0 0 0 .5px rgba(0, 0, 0, .14), 0 4px 14px rgba(0, 0, 0, .18); transition: background .2s ease, transform .2s ease; }
 .omni-close:hover { background: linear-gradient(135deg, rgba(255, 255, 255, .88), rgba(255, 255, 255, .66)); }
 .omni-close:active { transform: scale(.94); }
-.omni-chat-frame { border: 0; border-radius: 17px; width: 100%; flex: 1 1 0; min-height: 0; background: #f4f5f7; }
-.omni-csat { position: absolute; inset: 0; z-index: 0; display: flex; flex-direction: column; background: #fff; border-radius: 17px; overflow: hidden; }
+.omni-chat-frame { border: 0; border-radius: var(--omni-radius-inner, 17px); width: 100%; flex: 1 1 0; min-height: 0; background: #f4f5f7; }
+.omni-csat { position: absolute; inset: 0; z-index: 0; display: flex; flex-direction: column; background: #fff; border-radius: var(--omni-radius-inner, 17px); overflow: hidden; }
 .omni-csat-bar { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 44px; padding: 0 28px 0 8px; border-bottom: 1px solid rgba(0, 0, 0, .08); background: #fff; }
 .omni-csat-back, .omni-csat-newtab { appearance: none; border: 0; background: transparent; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; font: inherit; font-size: 13px; font-weight: 600; line-height: 1; color: #1f2937; transition: background .2s ease; }
 .omni-csat-back { padding: 8px 12px 8px 8px; }

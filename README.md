@@ -9,7 +9,7 @@ The launcher renders inside a shadow root with `omni-` prefixed CSS classes, so 
 ```html
 <script
   type="module"
-  src="https://cdn.jsdelivr.net/npm/chatkit-widgets@0.3.0/dist/omnichannel.js"
+  src="https://cdn.jsdelivr.net/npm/chatkit-widgets@0.3.1/dist/omnichannel.js"
   data-omni-username="YOUR_USERNAME"
   data-omni-website-id="YOUR_WEBSITE_ID"
   data-omni-app-url="https://YOUR_PLATFORM_APP"
@@ -18,7 +18,7 @@ The launcher renders inside a shadow root with `omni-` prefixed CSS classes, so 
 
 This external module tag initializes the widget without inline JavaScript. `data-omni-position` (`bottom-right`, `bottom-left`, `right`, or `left`) and `data-omni-text` (a message to pre-fill in the chat input; it is no longer pre-filled in the same browser tab once the visitor has sent it) are optional.
 
-To serve the JavaScript from the platform app instead of the npm CDN, point `src` at `https://YOUR_PLATFORM_APP/omnichannel-widget/v0.3.0/omnichannel.js`.
+To serve the JavaScript from the platform app instead of the npm CDN, point `src` at `https://YOUR_PLATFORM_APP/omnichannel-widget/v0.3.1/omnichannel.js`.
 
 ## Install from npm
 
